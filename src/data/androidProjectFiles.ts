@@ -573,9 +573,9 @@ export const ANDROID_MANIFEST_XML = `<?xml version="1.0" encoding="utf-8"?>
 
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@android:drawable/sym_def_app_icon"
         android:label="Call Log Injector"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@android:drawable/sym_def_app_icon"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         
@@ -614,7 +614,22 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        getByName("debug") {
+            val keystoreFile = rootProject.file("debug.keystore")
+            if (keystoreFile.exists()) {
+                storeFile = keystoreFile
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -636,19 +651,19 @@ android {
 }
 
 dependencies {
-    implementation(platform("androidx.compose:compose-bom:2024.10.01"))
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.activity:activity-compose:1.9.3")
-    implementation("androidx.core:core-ktx:1.15.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.kotlinx.coroutines.android)
 
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    debugImplementation(libs.androidx.ui.tooling)
+    debugImplementation(libs.androidx.ui.test.manifest)
 }
 `;
 
@@ -686,22 +701,28 @@ plugins {
 `;
 
 export const GRADLE_LIBS_TOML = `[versions]
-agp = "8.7.2"
-kotlin = "2.0.21"
+agp = "9.1.1"
+kotlin = "2.1.10"
 coreKtx = "1.15.0"
 junit = "4.13.2"
-activityCompose = "1.9.3"
-composeBom = "2024.10.01"
+activityCompose = "1.10.0"
+composeBom = "2025.01.01"
+lifecycleRuntimeKtx = "2.8.7"
+coroutines = "1.9.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -714,30 +735,11 @@ export const README_MD = `# Native Android Call Log Injector (Kotlin + Jetpack C
 This project allows developers to inject realistic simulated outgoing call entries directly into the Android system's Telephony Call Log database via \`ContentResolver\`.
 
 ## Features
-- **Target Phone Number Input**: Enter any phone number (e.g. \`+1 (555) 019-2834\`).
+- **Target Phone Number Input**: Enter any phone number or multiple numbers at once.
 - **Time Window**: Specify how far back in hours to disperse the timestamps (e.g. \`24\` hours).
 - **Call Count**: Configure how many records to generate.
 - **Runtime Permissions**: Uses \`ActivityResultContracts.RequestMultiplePermissions\` to safely request \`WRITE_CALL_LOG\` and \`READ_CALL_LOG\`.
-- **System CallLog Insertion**: Maps:
-  - \`CallLog.Calls.NUMBER\` -> Target phone number
-  - \`CallLog.Calls.DATE\` -> Past timestamp (Current time - random offset up to window)
-  - \`CallLog.Calls.DURATION\` -> Random duration between 10s and 120s
-  - \`CallLog.Calls.TYPE\` -> \`CallLog.Calls.OUTGOING_TYPE\` (2)
-  - \`CallLog.Calls.IS_READ\` -> 1
-- **API 24 to 35 Compatibility**: Gracefully manages deprecated fields and runs on background IO dispatchers.
-
-## How to Run in Android Studio
-1. Open **Android Studio** (Ladybug / Koala / Hedgehog or newer).
-2. Click **File -> New -> Import Project** (or **Open**).
-3. Select this unzipped project directory.
-4. Allow Gradle sync to complete.
-5. Connect an Android device or start an Android Emulator (API 24+).
-6. Click **Run ('app')** (Shift + F10).
-7. Grant the **Call Log** permissions dialog when prompted.
-8. Open the native **Google Phone / Dialer** app on your device to see the newly injected calls in your Recents list!
-
-## Google Play Sensitive Permissions Warning
-Note that \`WRITE_CALL_LOG\` and \`READ_CALL_LOG\` are classified by Google Play as **Sensitive & High-Risk Permissions**. Google restricts production Play Store publication to apps that are set as the user's default phone or SMS handler. For local testing, QA, forensics, or internal enterprise apps, it runs freely on any sideloaded APK or debug build.
+- **Automatic GitHub Actions APK Build & Release**: Built with AGP 9.1.1 and Gradle 9.3.1, automatically generating a temporary debug keystore and publishing the debug APK to GitHub Releases.
 `;
 
 export const ADB_COMMANDS_SNIPPET = `### Quick ADB Terminal Alternative Commands
@@ -769,39 +771,241 @@ done
 adb shell content query --uri content://call_log/calls --projection number:date:duration:type
 `;
 
-export const GITHUB_WORKFLOW_YML = `name: Build Android APK (No PC Required)
+export const GITHUB_WORKFLOW_YML = `name: Build and Publish Debug APK
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches:
+      - main
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  build:
+  build-apk:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
           distribution: 'temurin'
-          cache: gradle
+          java-version: '17'
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew || true
+      - name: Verify Java environment
+        run: |
+          set -euo pipefail
+          java -version
+          echo "JAVA_HOME=\${JAVA_HOME:-}"
+          if [ -z "\${JAVA_HOME:-}" ]; then
+            echo "Error: JAVA_HOME is not set." >&2
+            exit 1
+          fi
+          JAVA_VER_OUTPUT=$(java -version 2>&1 | head -n 1)
+          echo "Detected Java version line: $JAVA_VER_OUTPUT"
+          JAVA_MAJOR=$(echo "$JAVA_VER_OUTPUT" | sed -E 's/.*"([0-9]+)(\\\\.[0-9]+)*".*/\\\\1/')
+          if ! [[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]]; then
+            echo "Error: Could not detect active Java major version." >&2
+            exit 1
+          fi
+          echo "Active Java major version: $JAVA_MAJOR"
+          if [ "$JAVA_MAJOR" -lt 17 ]; then
+            echo "Error: Active Java major version ($JAVA_MAJOR) is lower than 17." >&2
+            exit 1
+          fi
 
-      - name: Build Debug APK with Gradle
-        run: ./gradlew assembleDebug --stacktrace
+      - name: Set up Gradle 9.3.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
 
-      - name: Upload Debug APK Artifact
+      - name: Create temporary debug keystore
+        run: |
+          set -euo pipefail
+          KEYSTORE_PATH="./debug.keystore"
+          if [ ! -f "$KEYSTORE_PATH" ]; then
+            echo "Generating temporary debug keystore..."
+            "$JAVA_HOME/bin/keytool" -genkeypair -v \\\\
+              -keystore "$KEYSTORE_PATH" \\\\
+              -storepass android \\\\
+              -alias androiddebugkey \\\\
+              -keypass android \\\\
+              -keyalg RSA \\\\
+              -keysize 2048 \\\\
+              -validity 10000 \\\\
+              -dname "CN=Android Debug,O=Android,C=US" > /dev/null 2>&1
+          else
+            echo "Existing ./debug.keystore found."
+          fi
+          if [ ! -f "$KEYSTORE_PATH" ] || [ ! -s "$KEYSTORE_PATH" ]; then
+            echo "Error: ./debug.keystore could not be created or is empty." >&2
+            exit 1
+          fi
+          echo "Confirmed ./debug.keystore exists."
+
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --stacktrace --no-daemon
+
+      - name: Verify the APK
+        run: |
+          set -euo pipefail
+          EXPECTED_APK="app/build/outputs/apk/debug/app-debug.apk"
+          if [ ! -e "$EXPECTED_APK" ]; then
+            echo "Error: Expected debug APK not found at $EXPECTED_APK" >&2
+            if [ -d "app/build/outputs/apk" ]; then
+              echo "Discovered APK paths inside app/build/outputs/apk:" >&2
+              find app/build/outputs/apk -type f -name "*.apk" >&2 || true
+            else
+              echo "Directory app/build/outputs/apk does not exist." >&2
+            fi
+            exit 1
+          fi
+          if [ ! -f "$EXPECTED_APK" ]; then
+            echo "Error: $EXPECTED_APK is not a regular file." >&2
+            exit 1
+          fi
+          if [ ! -s "$EXPECTED_APK" ]; then
+            echo "Error: $EXPECTED_APK is empty." >&2
+            exit 1
+          fi
+          case "$EXPECTED_APK" in
+            *.apk) ;;
+            *)
+              echo "Error: $EXPECTED_APK does not have the .apk extension." >&2
+              exit 1
+              ;;
+          esac
+          if [ "$EXPECTED_APK" != "app/build/outputs/apk/debug/app-debug.apk" ]; then
+            echo "Error: Selected APK path does not match app/build/outputs/apk/debug/app-debug.apk" >&2
+            exit 1
+          fi
+          echo "Verified APK at $EXPECTED_APK ($(stat -c%s "$EXPECTED_APK") bytes)."
+
+      - name: Upload debug APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 7
+          if-no-files-found: error
+
+      - name: Prepare APK release asset
+        id: prepare_asset
+        run: |
+          set -euo pipefail
+          VERIFIED_APK="app/build/outputs/apk/debug/app-debug.apk"
+          if [ ! -f "$VERIFIED_APK" ] || [ ! -s "$VERIFIED_APK" ]; then
+            echo "Error: Verified APK is missing or empty before asset preparation." >&2
+            exit 1
+          fi
+          RAW_REPO_NAME="\${GITHUB_REPOSITORY#*/}"
+          SANITIZED_REPO=$(echo "$RAW_REPO_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g; s/^-+//; s/-+$//')
+          if [ -z "$SANITIZED_REPO" ]; then
+            SANITIZED_REPO="android-app"
+          fi
+          ASSET_FILENAME="\${SANITIZED_REPO}-debug-build-\${GITHUB_RUN_NUMBER}.apk"
+          TEMP_ASSET_DIR=$(mktemp -d "\${RUNNER_TEMP}/apk-release-XXXXXX")
+          ASSET_FULL_PATH="\${TEMP_ASSET_DIR}/\${ASSET_FILENAME}"
+          cp "$VERIFIED_APK" "$ASSET_FULL_PATH"
+          if [ ! -f "$ASSET_FULL_PATH" ] || [ ! -s "$ASSET_FULL_PATH" ]; then
+            echo "Error: Prepared release asset is missing or empty." >&2
+            exit 1
+          fi
+          echo "asset_path=\${ASSET_FULL_PATH}" >> "$GITHUB_OUTPUT"
+          echo "asset_name=\${ASSET_FILENAME}" >> "$GITHUB_OUTPUT"
+          echo "Prepared release asset: \${ASSET_FILENAME}"
+
+      - name: Publish APK to GitHub Releases
+        id: publish_release
+        continue-on-error: true
+        env:
+          GH_TOKEN: \${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh --version
+          ASSET_PATH="\${{ steps.prepare_asset.outputs.asset_path }}"
+          ASSET_NAME="\${{ steps.prepare_asset.outputs.asset_name }}"
+          if [ -z "$ASSET_PATH" ] || [ ! -f "$ASSET_PATH" ] || [ ! -s "$ASSET_PATH" ]; then
+            echo "Error: Prepared release asset does not exist or is empty." >&2
+            exit 1
+          fi
+          case "$ASSET_PATH" in
+            *.apk) ;;
+            *)
+              echo "Error: Release asset is not an .apk file." >&2
+              exit 1
+              ;;
+          esac
+          RELEASE_TAG="debug-apk-build-\${GITHUB_RUN_NUMBER}-\${GITHUB_RUN_ATTEMPT}"
+          RELEASE_TITLE="Debug APK Build #\${GITHUB_RUN_NUMBER}"
+          RELEASE_NOTES=$(cat <<EOF
+          ### Automatically Generated Debug APK
+
+          - **Status:** Built automatically by GitHub Actions
+          - **GitHub Actions Run Number:** \${GITHUB_RUN_NUMBER}
+          - **GitHub Actions Run Attempt:** \${GITHUB_RUN_ATTEMPT}
+          - **Source Commit SHA:** \${GITHUB_SHA}
+          - **Purpose:** Intended for testing only (not a Play Store production release)
+          - **Signing:** Signed only with a temporary debug keystore
+          EOF
+          )
+          gh release create "$RELEASE_TAG" "$ASSET_PATH" \\\\
+            --title "$RELEASE_TITLE" \\\\
+            --target "$GITHUB_SHA" \\\\
+            --notes "$RELEASE_NOTES" \\\\
+            --latest
+
+      - name: Report APK download result
+        if: always()
+        env:
+          GH_TOKEN: \${{ github.token }}
+        run: |
+          set -euo pipefail
+          RELEASE_TAG="debug-apk-build-\${GITHUB_RUN_NUMBER}-\${GITHUB_RUN_ATTEMPT}"
+          RELEASE_TITLE="Debug APK Build #\${GITHUB_RUN_NUMBER}"
+          ASSET_NAME="\${{ steps.prepare_asset.outputs.asset_name }}"
+          PUBLISH_OUTCOME="\${{ steps.publish_release.outcome }}"
+
+          if [ "$PUBLISH_OUTCOME" = "success" ] && gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            RELEASE_URL=$(gh release view "$RELEASE_TAG" --json url --jq .url)
+            echo "=========================================="
+            echo "GitHub Release Published Successfully!"
+            echo "Release Tag:   $RELEASE_TAG"
+            echo "Release Title: $RELEASE_TITLE"
+            echo "Release URL:   $RELEASE_URL"
+            echo "APK Asset:     $ASSET_NAME"
+            echo "=========================================="
+            echo "The APK can be downloaded directly from the release Assets section."
+            echo "The normal Actions artifact (app-debug-apk) is also available as a backup."
+
+            {
+              echo "## Debug APK Download Ready"
+              echo ""
+              echo "- **Release Title:** \${RELEASE_TITLE}"
+              echo "- **Release Tag:** \\\`\${RELEASE_TAG}\\\`"
+              echo "- **APK Asset Filename:** \\\`\${ASSET_NAME}\\\`"
+              echo "- **Direct GitHub Release Page:** [\${RELEASE_URL}](\${RELEASE_URL})"
+              echo ""
+              echo "You can download the APK directly on your phone from the **Assets** section of the GitHub Release page above."
+              echo "The normal GitHub Actions artifact (\\\`app-debug-apk\\\`) is also available as a backup on this workflow run summary page."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::GitHub Release publishing did not succeed, but the APK build and Actions artifact upload succeeded."
+            echo "APK Build Status: SUCCEEDED"
+            echo "Backup Artifact:  app-debug-apk (available on this workflow run summary page)"
+
+            {
+              echo "## Warning: GitHub Release Publishing Failed"
+              echo ""
+              echo "- **APK Build Status:** Succeeded"
+              echo "- **Actions Artifact:** \\\`app-debug-apk\\\` remains available for download on this workflow summary page."
+              echo ""
+              echo "Although publishing to GitHub Releases encountered an error, your compiled debug APK was preserved as the \\\`app-debug-apk\\\` workflow artifact."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 `;
 
 export const ALL_ANDROID_PROJECT_FILES: AndroidFile[] = [
