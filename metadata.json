@@ -1,0 +1,6 @@
+{
+  "name": "Android Call Log Injector & Studio Lab",
+  "description": "Native Android Kotlin & Jetpack Compose Call Log Injector with interactive device simulator, ContentResolver database inspector, and production-ready Android Studio project generator.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
