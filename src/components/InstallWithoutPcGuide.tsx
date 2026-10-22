@@ -217,9 +217,9 @@ done`;
                 4
               </div>
               <div className="space-y-1">
-                <h4 className="text-xs font-bold text-white">Download the generated APK from GitHub</h4>
+                <h4 className="text-xs font-bold text-white">Download the generated APK from GitHub Releases or Actions</h4>
                 <p className="text-xs text-slate-300">
-                  On GitHub, tap the <strong>Actions</strong> tab. You will see a job titled <em>"Build Android APK (No PC Required)"</em> running. Once the green checkmark appears (~90 seconds), tap the run &rarr; scroll to <strong>Artifacts</strong> at the bottom &rarr; tap <strong>app-debug-apk</strong> to download!
+                  On GitHub, tap the <strong>Actions</strong> tab to watch the <em>"Build and Publish Debug APK"</em> workflow finish (~90 seconds). Once complete, open your repository's <strong>Releases</strong> section and tap the <code className="text-emerald-400">*-debug-build-*.apk</code> file under <strong>Assets</strong> to download the APK directly to your phone! (The <code className="text-slate-200">app-debug-apk</code> artifact is also saved on the workflow summary page as a backup.)
                 </p>
               </div>
             </div>

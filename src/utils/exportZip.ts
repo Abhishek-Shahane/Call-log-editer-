@@ -4,17 +4,13 @@ import { ALL_ANDROID_PROJECT_FILES } from '../data/androidProjectFiles';
 export async function downloadAndroidProjectZip(): Promise<void> {
   const zip = new JSZip();
 
-  // Root folder
-  const root = zip.folder('CallLogInjector');
-  if (!root) return;
-
-  // Add all files
+  // Add all files directly at the archive root so GitHub Actions finds build.gradle.kts and .github/workflows/build-apk.yml at repo root
   for (const file of ALL_ANDROID_PROJECT_FILES) {
-    root.file(file.path, file.content);
+    zip.file(file.path, file.content);
   }
 
   // Add standard .gitignore
-  root.file(
+  zip.file(
     '.gitignore',
     `*.iml
 .gradle
@@ -31,6 +27,7 @@ export async function downloadAndroidProjectZip(): Promise<void> {
 .externalNativeBuild
 .cxx
 local.properties
+debug.keystore
 `
   );
 

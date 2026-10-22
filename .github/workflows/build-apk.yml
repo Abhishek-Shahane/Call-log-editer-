@@ -34,8 +34,8 @@ jobs:
           fi
           JAVA_VER_OUTPUT=$(java -version 2>&1 | head -n 1)
           echo "Detected Java version line: $JAVA_VER_OUTPUT"
-          JAVA_MAJOR=$(echo "$JAVA_VER_OUTPUT" | sed -E 's/.*"([0-9]+)(\.[0-9]+)*".*/\1/')
-          if ! [[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]]; then
+          JAVA_MAJOR=$(echo "$JAVA_VER_OUTPUT" | sed -nE 's/.*version "1\.([0-9]+).*/\1/p; t; s/.*version "([0-9]+).*/\1/p; t; s/[^0-9]*([0-9]+).*/\1/p')
+          if [ -z "$JAVA_MAJOR" ] || ! [[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]]; then
             echo "Error: Could not detect active Java major version." >&2
             exit 1
           fi
@@ -123,7 +123,7 @@ jobs:
         id: prepare_asset
         run: |
           set -euo pipefail
-           VERIFIED_APK="app/build/outputs/apk/debug/app-debug.apk"
+          VERIFIED_APK="app/build/outputs/apk/debug/app-debug.apk"
           if [ ! -f "$VERIFIED_APK" ] || [ ! -s "$VERIFIED_APK" ]; then
             echo "Error: Verified APK is missing or empty before asset preparation." >&2
             exit 1
@@ -168,17 +168,16 @@ jobs:
           esac
           RELEASE_TAG="debug-apk-build-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
           RELEASE_TITLE="Debug APK Build #${GITHUB_RUN_NUMBER}"
-          RELEASE_NOTES=$(cat <<EOF
-          ### Automatically Generated Debug APK
-
-          - **Status:** Built automatically by GitHub Actions
-          - **GitHub Actions Run Number:** ${GITHUB_RUN_NUMBER}
-          - **GitHub Actions Run Attempt:** ${GITHUB_RUN_ATTEMPT}
-          - **Source Commit SHA:** ${GITHUB_SHA}
-          - **Purpose:** Intended for testing only (not a Play Store production release)
-          - **Signing:** Signed only with a temporary debug keystore
-          EOF
-          )
+          RELEASE_NOTES=$(printf '%s\n' \
+            "### Automatically Generated Debug APK" \
+            "" \
+            "- **Description:** This is an automatically generated debug APK." \
+            "- **Build System:** The APK was built by GitHub Actions." \
+            "- **GitHub Actions Run Number:** ${GITHUB_RUN_NUMBER}" \
+            "- **GitHub Actions Run Attempt:** ${GITHUB_RUN_ATTEMPT}" \
+            "- **Source Commit SHA:** ${GITHUB_SHA}" \
+            "- **Purpose:** The APK is intended for testing and is not a Play Store production release." \
+            "- **Signing:** The APK is signed only with a temporary debug keystore.")
           gh release create "$RELEASE_TAG" "$ASSET_PATH" \
             --title "$RELEASE_TITLE" \
             --target "$GITHUB_SHA" \

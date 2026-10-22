@@ -251,7 +251,6 @@ fun CallLogInjectorScreen() {
 
             // Input Fields based on mode
             if (!isMultiNumberMode) {
-                // Single Number Input
                 OutlinedTextField(
                     value = singleNumber,
                     onValueChange = { singleNumber = it },
@@ -269,7 +268,6 @@ fun CallLogInjectorScreen() {
                     shape = RoundedCornerShape(12.dp)
                 )
             } else {
-                // Multiple Numbers Input (Comma or newline separated)
                 Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     OutlinedTextField(
                         value = multiNumbersText,
@@ -294,7 +292,6 @@ fun CallLogInjectorScreen() {
                         shape = RoundedCornerShape(12.dp)
                     )
 
-                    // Distribution Option Toggle
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -363,7 +360,6 @@ fun CallLogInjectorScreen() {
             // Action Button: Inject Fake Calls
             Button(
                 onClick = {
-                    // Check runtime permissions first
                     val hasWritePermission = ContextCompat.checkSelfPermission(
                         context,
                         Manifest.permission.WRITE_CALL_LOG
@@ -454,7 +450,6 @@ fun CallLogInjectorScreen() {
     }
 }
 
-// Data class to wrap injection outcome
 data class InjectionResult(
     val isSuccess: Boolean,
     val message: String,
@@ -462,10 +457,6 @@ data class InjectionResult(
     val numbersCount: Int = 0
 )
 
-/**
- * 4. Call Log Injection Function (Multi-Number Enabled)
- * Injects simulated outgoing calls into the native Android ContentResolver CallLog.Calls URI.
- */
 fun injectFakeCalls(
     context: Context,
     targetNumbers: List<String>,
@@ -484,12 +475,11 @@ fun injectFakeCalls(
 
     try {
         if (isPerNumber) {
-            // Generate callCount for EACH number
             for (targetNumber in targetNumbers) {
                 for (i in 1..callCount) {
                     val randomOffsetMs = if (maxOffsetMs > 0) (random.nextDouble() * maxOffsetMs).toLong() else 0L
                     val callTimestamp = currentTimeMs - randomOffsetMs
-                    val callDuration = 10 + random.nextInt(111) // 10..120 sec
+                    val callDuration = 10 + random.nextInt(111)
 
                     val values = ContentValues().apply {
                         put(CallLog.Calls.NUMBER, targetNumber)
@@ -508,7 +498,6 @@ fun injectFakeCalls(
                 }
             }
         } else {
-            // Distribute callCount randomly across the provided numbers
             for (i in 1..callCount) {
                 val targetNumber = targetNumbers[random.nextInt(targetNumbers.size)]
                 val randomOffsetMs = if (maxOffsetMs > 0) (random.nextDouble() * maxOffsetMs).toLong() else 0L
@@ -555,13 +544,6 @@ fun injectFakeCalls(
         )
     }
 }
-    } catch (e: Exception) {
-        return InjectionResult(
-            isSuccess = false,
-            message = "Error during insertion: " + (e.localizedMessage ?: e.javaClass.simpleName)
-        )
-    }
-}
 `;
 
 export const ANDROID_MANIFEST_XML = `<?xml version="1.0" encoding="utf-8"?>
@@ -596,7 +578,6 @@ export const ANDROID_MANIFEST_XML = `<?xml version="1.0" encoding="utf-8"?>
 
 export const BUILD_GRADLE_APP_KTS = `plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
 
@@ -606,7 +587,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.callloginjector"
-        minSdk = 24 // Android 7.0 (Nougat)
+        minSdk = 24
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
@@ -615,20 +596,17 @@ android {
     }
 
     signingConfigs {
-        getByName("debug") {
-            val keystoreFile = rootProject.file("debug.keystore")
-            if (keystoreFile.exists()) {
-                storeFile = keystoreFile
-                storePassword = "android"
-                keyAlias = "androiddebugkey"
-                keyPassword = "android"
-            }
+        create("debugConfig") {
+            storeFile = file("\${rootDir}/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
         }
     }
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("debugConfig")
         }
         release {
             isMinifyEnabled = false
@@ -638,13 +616,12 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
+
     buildFeatures {
         compose = true
     }
@@ -656,6 +633,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.material.icons.core)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.ktx)
@@ -695,14 +673,19 @@ include(":app")
 export const BUILD_GRADLE_PROJECT_KTS = `// Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
     alias(libs.plugins.android.application) apply false
-    alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.compose) apply false
 }
 `;
 
+export const GRADLE_PROPERTIES = `org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+android.useAndroidX=true
+kotlin.code.style=official
+android.nonTransitiveRClass=true
+`;
+
 export const GRADLE_LIBS_TOML = `[versions]
 agp = "9.1.1"
-kotlin = "2.1.10"
+kotlin = "2.2.10"
 coreKtx = "1.15.0"
 junit = "4.13.2"
 activityCompose = "1.10.0"
@@ -721,12 +704,12 @@ androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
 androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 `;
 
@@ -807,8 +790,8 @@ jobs:
           fi
           JAVA_VER_OUTPUT=$(java -version 2>&1 | head -n 1)
           echo "Detected Java version line: $JAVA_VER_OUTPUT"
-          JAVA_MAJOR=$(echo "$JAVA_VER_OUTPUT" | sed -E 's/.*"([0-9]+)(\\\\.[0-9]+)*".*/\\\\1/')
-          if ! [[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]]; then
+          JAVA_MAJOR=$(echo "$JAVA_VER_OUTPUT" | sed -nE 's/.*version "1\\\\.([0-9]+).*/\\\\1/p; t; s/.*version "([0-9]+).*/\\\\1/p; t; s/[^0-9]*([0-9]+).*/\\\\1/p')
+          if [ -z "$JAVA_MAJOR" ] || ! [[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]]; then
             echo "Error: Could not detect active Java major version." >&2
             exit 1
           fi
@@ -941,17 +924,16 @@ jobs:
           esac
           RELEASE_TAG="debug-apk-build-\${GITHUB_RUN_NUMBER}-\${GITHUB_RUN_ATTEMPT}"
           RELEASE_TITLE="Debug APK Build #\${GITHUB_RUN_NUMBER}"
-          RELEASE_NOTES=$(cat <<EOF
-          ### Automatically Generated Debug APK
-
-          - **Status:** Built automatically by GitHub Actions
-          - **GitHub Actions Run Number:** \${GITHUB_RUN_NUMBER}
-          - **GitHub Actions Run Attempt:** \${GITHUB_RUN_ATTEMPT}
-          - **Source Commit SHA:** \${GITHUB_SHA}
-          - **Purpose:** Intended for testing only (not a Play Store production release)
-          - **Signing:** Signed only with a temporary debug keystore
-          EOF
-          )
+          RELEASE_NOTES=$(printf '%s\\\\n' \\\\
+            "### Automatically Generated Debug APK" \\\\
+            "" \\\\
+            "- **Description:** This is an automatically generated debug APK." \\\\
+            "- **Build System:** The APK was built by GitHub Actions." \\\\
+            "- **GitHub Actions Run Number:** \${GITHUB_RUN_NUMBER}" \\\\
+            "- **GitHub Actions Run Attempt:** \${GITHUB_RUN_ATTEMPT}" \\\\
+            "- **Source Commit SHA:** \${GITHUB_SHA}" \\\\
+            "- **Purpose:** The APK is intended for testing and is not a Play Store production release." \\\\
+            "- **Signing:** The APK is signed only with a temporary debug keystore.")
           gh release create "$RELEASE_TAG" "$ASSET_PATH" \\\\
             --title "$RELEASE_TITLE" \\\\
             --target "$GITHUB_SHA" \\\\
@@ -1027,22 +1009,29 @@ export const ALL_ANDROID_PROJECT_FILES: AndroidFile[] = [
     name: 'build.gradle.kts (App)',
     path: 'app/build.gradle.kts',
     language: 'kotlin',
-    description: 'Module-level build script with Compose dependencies and minSdk 24',
+    description: 'Module-level build script for AGP 9.1.1 with Compose dependencies and debugConfig signing',
     content: BUILD_GRADLE_APP_KTS
   },
   {
     name: 'libs.versions.toml',
     path: 'gradle/libs.versions.toml',
     language: 'properties',
-    description: 'Version catalog for dependencies and plugins',
+    description: 'Version catalog with AGP 9.1.1 and Kotlin 2.2.10',
     content: GRADLE_LIBS_TOML
   },
   {
     name: 'build.gradle.kts (Project)',
     path: 'build.gradle.kts',
     language: 'kotlin',
-    description: 'Project-level top build file',
+    description: 'Project-level top build file for AGP 9.1.1',
     content: BUILD_GRADLE_PROJECT_KTS
+  },
+  {
+    name: 'gradle.properties',
+    path: 'gradle.properties',
+    language: 'properties',
+    description: 'Gradle JVM args and AndroidX configuration',
+    content: GRADLE_PROPERTIES
   },
   {
     name: 'settings.gradle.kts',
@@ -1055,7 +1044,7 @@ export const ALL_ANDROID_PROJECT_FILES: AndroidFile[] = [
     name: 'build-apk.yml (GitHub Actions)',
     path: '.github/workflows/build-apk.yml',
     language: 'properties',
-    description: 'Free Cloud APK Builder - compile APK in 2 min without a PC',
+    description: 'Automatic Debug APK Builder & GitHub Release Publisher (AGP 9.1.1 + Gradle 9.3.1)',
     content: GITHUB_WORKFLOW_YML
   },
   {
